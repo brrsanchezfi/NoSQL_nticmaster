@@ -3,3 +3,5 @@ venv/
 
 doc_files/
 /doc_files
+
+*.pdf
