@@ -149,6 +149,7 @@ las siguientes rutas:
 - Ver detalles en [Exploración de locales](/Reto1/reporte_locales.md)
 - Ver detalles en [Exploración de licencias](/Reto1/reporte_licencias.md)
 - Ver detalles en [Exploración de Terrazas](/Reto1/reporte_terrazas.md)
+- Ver detalles en [Exploración de Actividad Comercial](/Reto1/reporte_actividadcomercial.md)
 
 <p align="center">
  <img src="Reto1/img/ref_informes_exploracion.png" alt="SS informe automatico"
@@ -475,7 +476,8 @@ f. Actualización de horarios de apertura y cierre de ciertos locales: modifica 
  
 ```python
 
-   ## condicion arbitraria, se modifican la fecha del distrito "ARGANZUA"
+   ## condicion arbitraria, se modifican la fecha del distrito "ARGANZUA" 
+   ## Un argumento puede ser mantenimientos nocturos que implique cerrar temprano y abrir tarde en el distrito "ARGANZUA" 
 
    filtro = {
       "local.desc_distrito_local": {
@@ -506,8 +508,12 @@ Resultado:
    print("Documentos modificados:", resultado_f.modified_count)
 
 ```
+
 Resultado:
 ```Documentos modificados: 5933```
+
+Adicionalmente, se generó un archivo llamado [Informe_consultas.md](/Reto2/Informe_consultas.md), el cual proporciona un mayor nivel de detalle sobre el rendimiento de cada consulta. No obstante, como apreciación general, todas las consultas se ejecutaron en tiempos inferiores a 300 milisegundos.
+
 ---
 
 
