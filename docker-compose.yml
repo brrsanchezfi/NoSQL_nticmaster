@@ -10,7 +10,7 @@ services:
       - mongo_data:/data/db
       - ./doc_files:/data/import
     environment:
-      MONGO_INITDB_DATABASE: reto_nosql
+      MONGO_INITDB_DATABASE: reto_nosq
 
 volumes:
   mongo_data:
