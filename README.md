@@ -149,7 +149,7 @@ las siguientes rutas:
 - Ver detalles en [Exploración de locales](/Reto1/reporte_locales.md)
 - Ver detalles en [Exploración de licencias](/Reto1/reporte_licencias.md)
 - Ver detalles en [Exploración de Terrazas](/Reto1/reporte_terrazas.md)
-- Ver detalles en [Exploración de Actividad Comercial](/Reto1/reporte_actividadcomercial.md)
+- Ver detalles en [Exploración de Actividad Economica](/Reto1/reporte_actividadeconomica.md)
 
 <p align="center">
  <img src="Reto1/img/ref_informes_exploracion.png" alt="SS informe automatico"
@@ -516,7 +516,271 @@ Adicionalmente, se generó un archivo llamado [Informe_consultas.md](/Reto2/Info
 
 ---
 
+### 3.3 Creación y uso de índices en MongoDB
 
+Para realizar este ítem se ejecutó la consulta primero sin índice y luego con índice, capturando el tiempo de ejecución y el tipo de scan realizado sobre la colección mediante el comando explain().
+
+a. Índice simple: crea un índice sobre un campo único, como el nombre del barrio. Asegúrate de que la búsqueda de documentos en base a este campo sea más eficiente.
+
+```Python
+   # solo en base al campo desc_barrio_local
+   collection.create_index(
+      [("local.desc_barrio_local", 1)],
+      name="idx_barrio"
+   )
+
+   # consulta que se va a realizar
+
+   filtro = {
+    "local.desc_barrio_local": {
+        "$regex": "^ACACIAS",
+        "$options": "i"
+    }
+   }
+```
+
+**Ejecucion sin indice:**
+```md
+==================================================
+📊 RESULTADO EXPLAIN
+==================================================
+Tiempo de ejecución: 172 ms
+Documentos examinados: 151162
+Claves de índice examinadas: 0
+
+Plan de ejecución ganador:
+--------------------------------------------------
+{ 'direction': 'forward',
+  'filter': { 'local.desc_barrio_local': { '$options': 'i',
+                                           '$regex': '^ACACIAS'}},
+  'stage': 'COLLSCAN'}
+
+```
+
+**Ejecucion con indice:**
+```md
+==================================================
+📊 RESULTADO EXPLAIN
+==================================================
+Tiempo de ejecución: 120 ms
+Documentos examinados: 1236
+Claves de índice examinadas: 151162
+
+Plan de ejecución ganador:
+--------------------------------------------------
+{ 'inputStage': { 'direction': 'forward',
+                  'filter': { 'local.desc_barrio_local': { '$options': 'i',
+                                                           '$regex': '^ACACIAS'}},
+                  'indexBounds': { 'local.desc_barrio_local': [ '["", {})',
+                                                                '[/^ACACIAS/i, '
+                                                                '/^ACACIAS/i]']},
+                  'indexName': 'idx_barrio',
+                  'indexVersion': 2,
+                  'isMultiKey': False,
+                  'isPartial': False,
+                  'isSparse': False,
+                  'isUnique': False,
+                  'keyPattern': {'local.desc_barrio_local': 1},
+                  'multiKeyPaths': {'local.desc_barrio_local': []},
+                  'stage': 'IXSCAN'},
+  'stage': 'FETCH'}
+
+```
+Observacion: Los tiempos de ejecución no muestran una diferencia muy significativa, especialmente tras múltiples ejecuciones, esto probablemente se debe a algun caché de la base de datos. Sin embargo, la mejora en el rendimiento es evidente al observar la reducción en la cantidad de documentos examinados, pasando de 151162 a 1236.
+
+b. Índice compuesto: diseña un índice compuesto que combine los campos distrito y barrio. Este índice debe mejorar el rendimiento en consultas que incluyan ambos campos.
+
+```Python
+   # solo en base al campo desc_barrio_local y desc_barrio_local
+   collection.create_index(
+      [
+         ("local.desc_distrito_local", 1),
+         ("local.desc_barrio_local", 1)
+      ],
+      name="idx_distrito_barrio"
+   )
+
+   # consulta que se va a realizar
+
+   filtro = {
+      "local.desc_distrito_local": {
+         "$regex": "^SALAMANCA",
+         "$options": "i"
+      },
+      "local.desc_barrio_local": {
+         "$regex": "^GUINDALERA",
+         "$options": "i"
+      }
+   }
+```
+
+**Ejecucion sin indice:**
+```md
+==================================================
+📊 RESULTADO EXPLAIN
+==================================================
+Tiempo de ejecución: 146 ms
+Documentos examinados: 151162
+Claves de índice examinadas: 0
+
+Plan de ejecución ganador:
+--------------------------------------------------
+{ 'direction': 'forward',
+  'filter': { '$and': [ { 'local.desc_barrio_local': { '$options': 'i',
+                                                       '$regex': '^GUINDALERA'}},
+                        { 'local.desc_distrito_local': { '$options': 'i',
+                                                         '$regex': '^SALAMANCA'}}]},
+  'stage': 'COLLSCAN'}
+
+```
+
+**Ejecucion con indice:**
+```md
+==================================================
+📊 RESULTADO EXPLAIN
+==================================================
+Tiempo de ejecución: 138 ms
+Documentos examinados: 1825
+Claves de índice examinadas: 151162
+
+Plan de ejecución ganador:
+--------------------------------------------------
+{ 'inputStage': { 'direction': 'forward',
+                  'filter': { '$and': [ { 'local.desc_distrito_local': { '$options': 'i',
+                                                                         '$regex': '^SALAMANCA'}},
+                                        { 'local.desc_barrio_local': { '$options': 'i',
+                                                                       '$regex': '^GUINDALERA'}}]},
+                  'indexBounds': { 'local.desc_barrio_local': [ '["", {})',
+                                                                '[/^GUINDALERA/i, '
+                                                                '/^GUINDALERA/i]'],
+                                   'local.desc_distrito_local': [ '["", {})',
+                                                                  '[/^SALAMANCA/i, '
+                                                                  '/^SALAMANCA/i]']},
+                  'indexName': 'idx_distrito_barrio',
+                  'indexVersion': 2,
+                  'isMultiKey': False,
+                  'isPartial': False,
+                  'isSparse': False,
+                  'isUnique': False,
+                  'keyPattern': { 'local.desc_barrio_local': 1,
+                                  'local.desc_distrito_local': 1},
+                  'multiKeyPaths': { 'local.desc_barrio_local': [],
+                                     'local.desc_distrito_local': []},
+                  'stage': 'IXSCAN'},
+  'stage': 'FETCH'}
+
+```
+
+Observacion: Reducción en la cantidad de documentos examinados, pasando de 151162 a 1825, quizas en una base de datos con mas cantidad de documentos se apreciaria diferencias notables en el tipo de consulta.
+
+c. Índice de array: si tienes un campo que almacena un array (por ejemplo, una lista de actividades económicas asociadas a un local o terraza), crea un índice sobre ese campo para permitir búsquedas rápidas de documentos que contengan valores específicos en el array.
+
+```Python
+   # solo en base al campo desc_barrio_local y desc_barrio_local
+   collection.create_index(
+      [("actividadeconomica.desc_barrio_local", 1)],
+      name="idx_actividad"
+   )
+   # consulta que se va a realizar
+
+   filtro = {
+      "actividadeconomica.desc_barrio_local": {
+         "$regex": "^ARCOS"
+      }
+   }
+```
+
+**Ejecucion sin indice:**
+```md
+==================================================
+📊 RESULTADO EXPLAIN
+==================================================
+Tiempo de ejecución: 210 ms
+Documentos examinados: 151162
+Claves de índice examinadas: 0
+
+Plan de ejecución ganador:
+--------------------------------------------------
+{ 'direction': 'forward',
+  'filter': {'actividadeconomica.desc_barrio_local': {'$regex': '^ARCOS'}},
+  'stage': 'COLLSCAN'}
+```
+
+**Ejecucion con indice:**
+```md
+==================================================
+📊 RESULTADO EXPLAIN
+==================================================
+Tiempo de ejecución: 1 ms
+Documentos examinados: 400
+Claves de índice examinadas: 401
+
+Plan de ejecución ganador:
+--------------------------------------------------
+{ 'inputStage': { 'direction': 'forward',
+                  'indexBounds': { 'actividadeconomica.desc_barrio_local': [ '["ARCOS", '
+                                                                             '"ARCOT")',
+                                                                             '[/^ARCOS/, '
+                                                                             '/^ARCOS/]']},
+                  'indexName': 'idx_actividad',
+                  'indexVersion': 2,
+                  'isMultiKey': True,
+                  'isPartial': False,
+                  'isSparse': False,
+                  'isUnique': False,
+                  'keyPattern': {'actividadeconomica.desc_barrio_local': 1},
+                  'multiKeyPaths': { 'actividadeconomica.desc_barrio_local': [ 'actividadeconomica']},
+                  'stage': 'IXSCAN'},
+  'stage': 'FETCH'}
+
+```
+Observacion: Se evidenció un comportamiento distinto al esperado en las consultas. Inicialmente, estas se estaban construyendo utilizando un patrón simple de expresión regular junto con la opción **"$options": "i"** (búsqueda insensible a mayúsculas y minúsculas). Si bien se tenía conocimiento de que esta opción podía impactar el rendimiento, no se anticipaba que el efecto fuera tan significativo, llegando incluso a empeorar los tiempos de ejecución aun cuando existía un índice sobre el campo consultado.
+
+En conclusión, un filtro mal definido puede afectar negativamente el rendimiento de una consulta, incluso en presencia de índices, especialmente cuando dicho filtro se aplica sobre el mismo campo indexado y obliga al motor a realizar exploraciones más amplias de lo esperado.
+
+**Filtro mal definido**
+```python
+   filtro = {
+      "actividadeconomica.desc_barrio_local": {
+         "$regex": "^ARCOS",
+         "$options": "i"
+      }
+   }
+```
+
+```md
+==================================================
+📊 RESULTADO EXPLAIN
+==================================================
+Tiempo de ejecución: 472 ms
+Documentos examinados: 151161
+Claves de índice examinadas: 151161
+
+Plan de ejecución ganador:
+--------------------------------------------------
+{ 'filter': { 'actividadeconomica.desc_barrio_local': { '$options': 'i',
+                                                        '$regex': '^ARCOS'}},
+  'inputStage': { 'direction': 'forward',
+                  'indexBounds': { 'actividadeconomica.desc_barrio_local': [ '["", '
+                                                                             '{})',
+                                                                             '[/^ARCOS/i, '
+                                                                             '/^ARCOS/i]']},
+                  'indexName': 'idx_actividad',
+                  'indexVersion': 2,
+                  'isMultiKey': True,
+                  'isPartial': False,
+                  'isSparse': False,
+                  'isUnique': False,
+                  'keyPattern': {'actividadeconomica.desc_barrio_local': 1},
+                  'multiKeyPaths': { 'actividadeconomica.desc_barrio_local': [ 'actividadeconomica']},
+                  'stage': 'IXSCAN'},
+  'stage': 'FETCH'}
+```
+
+Las pruebas se realizaron en el notebook [E2_indices.ipynb](/Reto2/2_indices.ipynb)
+
+
+### 3.4 Modelo de datos (Versión 2): Extensión con alojamientos turísticos
 
 
 
